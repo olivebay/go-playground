@@ -14,14 +14,6 @@ import (
 
 var tenSecondsTimeout = 10 * time.Second
 
-// ErrTimeoutResponse are errors when the HTTP requests times out
-type ErrTimeoutResponse struct {
-	URL string
-}
-
-func (e ErrTimeoutResponse) Error() string {
-	return fmt.Sprintf("timedout waiting for %s", e.URL)
-}
 
 // Racer compares the response times of a and b, returning the fastest one, timing out on 10s
 func Racer(a, b string) (wunner string, error error) {
@@ -40,19 +32,22 @@ func measureResponseTime(url string, timeout time.Duration) (duration time.Durat
 
 // ConfigurableRacer compares the response times of a and b, returning the fastest one
 func ConfigurableRacer(a, b string, timeout time.Duration) (winner string, error error) {
-	aDuration, err := measureResponseTime(a, timeout)
-	if err != nil {
-		return "", ErrTimeoutResponse{URL: a}
-	}
-
-	bDuration, err := measureResponseTime(b, timeout)
-	if err != nil {
-		return "", ErrTimeoutResponse{URL: b}
-	}
-
-	if aDuration < bDuration {
+	select {
+	case <-getURL(a):
 		return a, nil
+	case <-getURL(b):
+		return b, nil
+	case <-time.After(timeout):
+		return "", fmt.Errorf("timed out while waiting for %q and %q", a, b)
 	}
-	return b, nil
+}
 
+func getURL(url string) chan struct{} {
+	ch := make(chan struct{})
+
+	go func() {
+		http.Get(url)
+		close(ch)
+	}()
+	return ch
 }
