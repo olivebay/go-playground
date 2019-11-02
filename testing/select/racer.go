@@ -14,6 +14,14 @@ import (
 
 var tenSecondsTimeout = 10 * time.Second
 
+type ErrTimeoutResponse struct{
+	URL string
+}
+
+func (e ErrTimeoutResponse) Error() string {
+	return fmt.Sprintf("timedout waiting for %s", e.URL)
+}
+
 // Racer compares the response times of a and b, returning the fastest one, timing out on 10s
 func Racer(a, b string) (wunner string, error error) {
 	return ConfigurableRacer(a, b, tenSecondsTimeout)
@@ -33,12 +41,12 @@ func measureResponseTime(url string, timeout time.Duration) (duration time.Durat
 func ConfigurableRacer(a, b string, timeout time.Duration) (winner string, error error) {
 	aDuration, err := measureResponseTime(a, timeout)
 	if err != nil {
-		return "", fmt.Errorf("timed out waiting for %s", a)
+		return "", ErrTimeoutResponse{URL: a}
 	}
 
 	bDuration, err := measureResponseTime(b, timeout)
 	if err != nil {
-		return "", fmt.Errorf("timed out waiting for %s", b)
+		return "", ErrTimeoutResponse{URL: b}
 	}
 
 	if aDuration < bDuration {
