@@ -14,7 +14,8 @@ import (
 
 var tenSecondsTimeout = 10 * time.Second
 
-type ErrTimeoutResponse struct{
+// ErrTimeoutResponse are errors when the HTTP requests times out
+type ErrTimeoutResponse struct {
 	URL string
 }
 
